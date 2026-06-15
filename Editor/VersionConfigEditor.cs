@@ -6,6 +6,9 @@ namespace Gosuman.BuildTools
     [CustomEditor(typeof(VersionConfig))]
     public class VersionConfigEditor : Editor
     {
+        const string NotesControlName = "ReleaseNotes";
+        bool notesFocusedLastFrame;
+
         public override void OnInspectorGUI()
         {
             var cfg = (VersionConfig)target;
@@ -55,12 +58,28 @@ namespace Gosuman.BuildTools
 
             EditorGUILayout.Space();
 
-            // Release notes
+            // Release notes — auto-height, save on unfocus
             EditorGUILayout.LabelField($"Release notes for {cfg.major}.{cfg.minor}", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-            cfg.releaseNotes = EditorGUILayout.TextArea(cfg.releaseNotes, GUILayout.MinHeight(80));
-            if (EditorGUI.EndChangeCheck())
+
+            float minHeight = EditorStyles.textArea.lineHeight * 3;
+            float contentHeight = EditorStyles.textArea.CalcHeight(
+                new GUIContent(cfg.releaseNotes),
+                EditorGUIUtility.currentViewWidth - 22f);
+            float notesHeight = Mathf.Max(minHeight, contentHeight);
+
+            bool notesFocused = GUI.GetNameOfFocusedControl() == NotesControlName;
+
+            GUI.SetNextControlName(NotesControlName);
+            string newNotes = EditorGUILayout.TextArea(cfg.releaseNotes, GUILayout.Height(notesHeight));
+
+            if (newNotes != cfg.releaseNotes)
+                cfg.releaseNotes = newNotes;
+
+            // Persist only when focus leaves the field
+            if (notesFocusedLastFrame && !notesFocused)
                 MarkDirty(cfg);
+
+            notesFocusedLastFrame = notesFocused;
 
             serializedObject.ApplyModifiedProperties();
         }
