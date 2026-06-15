@@ -1,5 +1,5 @@
 {
-  "name": "com.gosuman.buildtools",
+  "name": "dk.gosuman.buildtools",
   "version": "1.0.0",
   "displayName": "Gosuman Build Tools",
   "description": "Version management and build menu utilities for Unity projects.",
