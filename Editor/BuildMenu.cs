@@ -12,13 +12,13 @@ namespace Gosuman.BuildTools
             var profile = BuildProfile.GetActiveBuildProfile();
             if (profile == null)
             {
-                Debug.LogError("BuildTools: No active Build Profile set. Open Build Profiles (File > Build Profiles) and set one as active.");
+                Debug.LogError("BuildTools: No active Build Profile set. Open File > Build Profiles and set one as active.");
                 return;
             }
 
-            string version = VersionConfig.GetVersion();
+            string version = VersionReader.GetVersion();
             PlayerSettings.bundleVersion = version;
-            PlayerSettings.Android.bundleVersionCode = VersionConfig.GetCommitCount();
+            PlayerSettings.Android.bundleVersionCode = VersionReader.GetCommitCount();
             Debug.Log($"BuildTools: building version {version} using profile '{profile.name}'");
 
             BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions
@@ -30,7 +30,7 @@ namespace Gosuman.BuildTools
         [MenuItem("Build/Log Version")]
         static void LogVersion()
         {
-            Debug.Log($"BuildTools: version would be {VersionConfig.GetVersion()}");
+            Debug.Log($"BuildTools: version = {VersionReader.GetVersion()}");
         }
     }
 }
