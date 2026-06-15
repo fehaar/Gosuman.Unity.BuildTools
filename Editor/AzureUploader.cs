@@ -44,7 +44,11 @@ namespace Gosuman.BuildTools
                 using var resp = (HttpWebResponse)req.GetResponse();
                 bool ok = (int)resp.StatusCode >= 200 && (int)resp.StatusCode < 300;
                 if (ok)
-                    Debug.Log($"BuildTools: upload succeeded — {fileInfo.Length / 1024 / 1024} MB → {blobName}");
+                {
+                    var uri2 = new Uri(containerSasUrl);
+                    string downloadUrl = $"{uri2.GetLeftPart(UriPartial.Path)}/{blobName}{uri2.Query}";
+                    Debug.Log($"BuildTools: upload succeeded — {fileInfo.Length / 1024 / 1024} MB\nDownload: {downloadUrl}");
+                }
                 else
                     Debug.LogError($"BuildTools: upload failed — HTTP {(int)resp.StatusCode}");
                 return ok;
