@@ -10,18 +10,14 @@ namespace Gosuman.BuildTools
         {
             var cfg = (VersionConfig)target;
             serializedObject.Update();
+            GUI.changed = false;
 
-            // Major / minor
+            // Major / minor with inline bump buttons
             EditorGUILayout.LabelField("Version", EditorStyles.boldLabel);
-            EditorGUI.BeginChangeCheck();
-            cfg.major = EditorGUILayout.IntField("Major", cfg.major);
-            cfg.minor = EditorGUILayout.IntField("Minor", cfg.minor);
-            if (EditorGUI.EndChangeCheck())
-                MarkDirty(cfg);
 
-            // Bump buttons
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Bump Major"))
+            cfg.major = EditorGUILayout.IntField("Major", cfg.major);
+            if (GUILayout.Button("↑", GUILayout.Width(28)))
             {
                 Undo.RecordObject(cfg, "Bump Major");
                 cfg.major++;
@@ -29,7 +25,11 @@ namespace Gosuman.BuildTools
                 cfg.releaseNotes = "";
                 MarkDirty(cfg);
             }
-            if (GUILayout.Button("Bump Minor"))
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            cfg.minor = EditorGUILayout.IntField("Minor", cfg.minor);
+            if (GUILayout.Button("↑", GUILayout.Width(28)))
             {
                 Undo.RecordObject(cfg, "Bump Minor");
                 cfg.minor++;
@@ -37,6 +37,8 @@ namespace Gosuman.BuildTools
                 MarkDirty(cfg);
             }
             EditorGUILayout.EndHorizontal();
+
+            if (GUI.changed) MarkDirty(cfg);
 
             EditorGUILayout.Space();
 
