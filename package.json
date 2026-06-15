@@ -1,0 +1,10 @@
+{
+  "name": "com.gosuman.buildtools",
+  "version": "1.0.0",
+  "displayName": "Gosuman Build Tools",
+  "description": "Version management and build menu utilities for Unity projects.",
+  "unity": "6000.0",
+  "author": {
+    "name": "Gosuman"
+  }
+}
