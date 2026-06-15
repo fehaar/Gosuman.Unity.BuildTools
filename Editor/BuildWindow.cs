@@ -65,9 +65,18 @@ namespace Gosuman.BuildTools
             }
 
             if (!anySelected)
-            {
                 EditorGUILayout.HelpBox("Select at least one platform.", MessageType.Info);
-            }
+
+            EditorGUILayout.Space(12);
+            EditorGUILayout.LabelField("Azure Upload", EditorStyles.boldLabel);
+
+            string currentSas = EditorPrefs.GetString(AzureUploader.PrefContainerSasUrl, "");
+            string newSas = EditorGUILayout.PasswordField("Container SAS URL", currentSas);
+            if (newSas != currentSas)
+                EditorPrefs.SetString(AzureUploader.PrefContainerSasUrl, newSas);
+
+            if (!AzureUploader.IsConfigured)
+                EditorGUILayout.HelpBox("Enter SAS URL to enable automatic upload after build.", MessageType.None);
         }
 
         void RunBuilds()
@@ -106,6 +115,13 @@ namespace Gosuman.BuildTools
                 {
                     Debug.Log($"BuildTools: {platform.Name} succeeded ({report.summary.totalSize / 1024 / 1024} MB)");
                     built++;
+
+                    if (File.Exists(output) && AzureUploader.IsConfigured)
+                    {
+                        string ext = Path.GetExtension(output);
+                        string blobName = $"{Application.productName}-{version}-{platform.Name.ToLower()}{ext}";
+                        AzureUploader.Upload(output, blobName);
+                    }
                 }
                 else
                 {
