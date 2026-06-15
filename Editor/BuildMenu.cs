@@ -32,5 +32,13 @@ namespace Gosuman.BuildTools
         {
             Debug.Log($"BuildTools: version = {VersionReader.GetVersion()}");
         }
+
+        [MenuItem("Gosuman/Version Info #&v")]
+        static void SelectVersionInfo()
+        {
+            var cfg = VersionReader.LoadOrCreate();
+            Selection.activeObject = cfg;
+            EditorGUIUtility.PingObject(cfg);
+        }
     }
 }
