@@ -26,7 +26,17 @@ namespace Gosuman.BuildTools
         public static string GetVersion()
         {
             var cfg = LoadOrCreate();
-            return $"{cfg.major}.{cfg.minor}.{GetCommitCount()}";
+            string version = $"{cfg.major}.{cfg.minor}.{GetCommitCount()}";
+            // Append the CI run number only when GitHub provides it; locally it is always 0.
+            int run = GetRunNumber();
+            return run > 0 ? $"{version}.{run}" : version;
+        }
+
+        // GitHub Actions run number, or 0 when not running in CI.
+        public static int GetRunNumber()
+        {
+            string val = Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER");
+            return int.TryParse(val, out int n) ? n : 0;
         }
 
         // --- Release notes (external <major.minor>.md files) ---
