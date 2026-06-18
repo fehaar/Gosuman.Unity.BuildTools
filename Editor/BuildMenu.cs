@@ -1,15 +1,13 @@
 using UnityEditor;
-using UnityEngine;
 
 namespace Gosuman.BuildTools
 {
     public static class BuildMenu
     {
-        [MenuItem("Build/Build... %#b")]
-        static void OpenBuildWindow() => BuildWindow.Open();
-
-        [MenuItem("Build/Version Info #&v")]
-        static void SelectVersionInfo()
+        // Selects (creating if needed) the VersionConfig asset. Its inspector holds the
+        // version, release notes, and build controls — there is no separate Build window.
+        [MenuItem("Build/Build Config %#b")]
+        static void SelectBuildConfig()
         {
             var cfg = VersionReader.LoadOrCreate();
             Selection.activeObject = cfg;
