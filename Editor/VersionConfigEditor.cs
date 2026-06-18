@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
@@ -27,9 +28,12 @@ namespace Gosuman.BuildTools
         int loadedMinor = -1;
 
         // Cached commit count. GetCommitCount() shells out to git, so it must NOT run every
-        // repaint (the inspector repaints continuously while a text field is focused). We read
-        // it once on enable and only refresh on demand; builds still read it fresh.
+        // repaint (the inspector repaints continuously while a text field is focused). It is
+        // fetched on a background thread when the inspector is shown or the editor regains
+        // focus, then cached; builds still read it fresh.
         int commitCount;
+        Task<int> commitCountTask;
+        string projectDir; // captured on the main thread for the background git call
 
         // --- Build configuration ---
 
@@ -62,7 +66,45 @@ namespace Gosuman.BuildTools
             mode = (Mode)EditorPrefs.GetInt(ModePrefKey, (int)Mode.ActiveProfile);
             for (int i = 0; i < Platforms.Length; i++)
                 selected[i] = EditorPrefs.GetBool(Platforms[i].PrefKey, false);
-            commitCount = VersionReader.GetCommitCount();
+
+            projectDir = VersionReader.ProjectDir; // main thread
+            RefreshCommitCountAsync();
+            EditorApplication.focusChanged += OnEditorFocusChanged;
+        }
+
+        void OnDisable()
+        {
+            EditorApplication.focusChanged -= OnEditorFocusChanged;
+            EditorApplication.update -= PollCommitCount;
+        }
+
+        // Refresh when the user returns to the Unity editor (e.g. after committing in a terminal).
+        void OnEditorFocusChanged(bool focused)
+        {
+            if (focused) RefreshCommitCountAsync();
+        }
+
+        // Fetch the commit count on a background thread; PollCommitCount picks up the result
+        // on the main thread and repaints. No-op if a fetch is already in flight.
+        void RefreshCommitCountAsync()
+        {
+            if (commitCountTask != null && !commitCountTask.IsCompleted) return;
+            string dir = projectDir;
+            commitCountTask = Task.Run(() => VersionReader.GetCommitCount(dir));
+            EditorApplication.update -= PollCommitCount;
+            EditorApplication.update += PollCommitCount;
+        }
+
+        void PollCommitCount()
+        {
+            if (commitCountTask == null) { EditorApplication.update -= PollCommitCount; return; }
+            if (!commitCountTask.IsCompleted) return;
+
+            if (commitCountTask.Status == TaskStatus.RanToCompletion)
+                commitCount = commitCountTask.Result;
+            commitCountTask = null;
+            EditorApplication.update -= PollCommitCount;
+            Repaint();
         }
 
         public override void OnInspectorGUI()
@@ -103,7 +145,7 @@ namespace Gosuman.BuildTools
                 cfg.minor++;
                 MarkDirty(cfg);
             });
-            DrawComputedField("Commit", commitCount, () => commitCount = VersionReader.GetCommitCount());
+            DrawComputedField("Commit", commitCount, RefreshCommitCountAsync);
             EditorGUILayout.EndHorizontal();
 
             if (GUI.changed) MarkDirty(cfg);

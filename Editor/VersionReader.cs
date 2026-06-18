@@ -41,7 +41,9 @@ namespace Gosuman.BuildTools
 
         // --- Release notes (external <major.minor>.md files) ---
 
-        static string ProjectDir => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        // The Unity project directory. Reads Application.dataPath, so it must be accessed on
+        // the main thread — capture it there before handing work to a background thread.
+        public static string ProjectDir => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
 
         public static string GetReleaseNotesFolder(VersionConfig cfg) =>
             Path.GetFullPath(Path.Combine(ProjectDir, cfg.releaseNotesFolder));
@@ -101,24 +103,28 @@ namespace Gosuman.BuildTools
             }
         }
 
-        public static int GetCommitCount()
+        public static int GetCommitCount() => GetCommitCount(ProjectDir);
+
+        // Thread-safe overload: pass a working directory captured on the main thread so this
+        // can run on a background thread without touching Application.dataPath.
+        public static int GetCommitCount(string workingDir)
         {
             try
             {
-                string output = RunGit("rev-list --count HEAD");
+                string output = RunGit("rev-list --count HEAD", workingDir);
                 return int.TryParse(output.Trim(), out int n) ? n : 0;
             }
             catch { return 0; }
         }
 
-        static string RunGit(string args)
+        static string RunGit(string args, string workingDir)
         {
             var psi = new ProcessStartInfo("git", args)
             {
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                WorkingDirectory = Path.GetFullPath(Path.Combine(Application.dataPath, ".."))
+                WorkingDirectory = workingDir
             };
             using var p = Process.Start(psi);
             string output = p.StandardOutput.ReadToEnd();
