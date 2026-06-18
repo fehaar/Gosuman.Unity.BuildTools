@@ -1,8 +1,8 @@
 {
   "name": "dk.gosuman.buildtools",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "displayName": "Gosuman Build Tools",
-  "description": "Version management, active-profile/multi-platform build window, and external release notes for Unity projects.",
+  "description": "Version management, external release notes, and active-profile/multi-platform builds — all in the VersionConfig inspector.",
   "unity": "6000.0",
   "author": {
     "name": "Gosuman"
