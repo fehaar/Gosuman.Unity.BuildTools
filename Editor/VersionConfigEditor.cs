@@ -10,6 +10,11 @@ namespace Gosuman.BuildTools
         const string NotesControlName = "ReleaseNotes";
         bool notesFocusedLastFrame;
 
+        // Word-wrapping text-area style, built lazily (EditorStyles isn't ready at field init).
+        static GUIStyle notesStyle;
+        static GUIStyle NotesStyle =>
+            notesStyle ??= new GUIStyle(EditorStyles.textArea) { wordWrap = true };
+
         // External release-notes buffer, loaded lazily and reloaded when major/minor changes.
         string notesBuffer = "";
         int loadedMajor = -1;
@@ -80,16 +85,18 @@ namespace Gosuman.BuildTools
                 }
             }
 
-            float minHeight = EditorStyles.textArea.lineHeight * 3;
-            float contentHeight = EditorStyles.textArea.CalcHeight(
-                new GUIContent(notesBuffer),
-                EditorGUIUtility.currentViewWidth - 22f);
+            // Word-wrapped text area sized to the available width, so long lines wrap
+            // instead of widening the window and forcing a horizontal scrollbar.
+            float width = EditorGUIUtility.currentViewWidth - 22f;
+            float minHeight = NotesStyle.lineHeight * 3;
+            float contentHeight = NotesStyle.CalcHeight(new GUIContent(notesBuffer), width);
             float notesHeight = Mathf.Max(minHeight, contentHeight);
 
             bool notesFocused = GUI.GetNameOfFocusedControl() == NotesControlName;
 
             GUI.SetNextControlName(NotesControlName);
-            notesBuffer = EditorGUILayout.TextArea(notesBuffer, GUILayout.Height(notesHeight));
+            notesBuffer = EditorGUILayout.TextArea(notesBuffer, NotesStyle,
+                GUILayout.Height(notesHeight), GUILayout.ExpandWidth(true));
 
             // Persist to the external file only when focus leaves the field
             if (notesFocusedLastFrame && !notesFocused)
