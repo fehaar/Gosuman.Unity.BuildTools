@@ -33,10 +33,13 @@ namespace Gosuman.BuildTools
         bool[] selected = new bool[5];
         Mode mode;
 
+        Editor versionEditor;
+        Vector2 scroll;
+
         public static void Open()
         {
             var w = GetWindow<BuildWindow>("Build");
-            w.minSize = new Vector2(300, 260);
+            w.minSize = new Vector2(300, 320);
         }
 
         void OnEnable()
@@ -46,11 +49,24 @@ namespace Gosuman.BuildTools
                 selected[i] = EditorPrefs.GetBool(Platforms[i].PrefKey, false);
         }
 
+        void OnDisable()
+        {
+            if (versionEditor != null) DestroyImmediate(versionEditor);
+        }
+
         void OnGUI()
         {
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+
+            // Version config (bump / computed version / release notes) embedded at the top,
+            // reusing the asset's own inspector so there is a single source of truth.
             EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField($"Version: {VersionReader.GetVersion()}", EditorStyles.boldLabel);
+            DrawVersionConfig();
+
             EditorGUILayout.Space(8);
+            DrawSeparator();
+            EditorGUILayout.LabelField("Build", EditorStyles.boldLabel);
+            EditorGUILayout.Space(4);
 
             var newMode = (Mode)GUILayout.Toolbar((int)mode, new[] { "Active Profile", "Platforms" });
             if (newMode != mode)
@@ -64,6 +80,25 @@ namespace Gosuman.BuildTools
                 DrawActiveProfile();
             else
                 DrawPlatforms();
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        void DrawVersionConfig()
+        {
+            var cfg = VersionReader.LoadOrCreate();
+            if (versionEditor == null || versionEditor.target != cfg)
+            {
+                if (versionEditor != null) DestroyImmediate(versionEditor);
+                versionEditor = Editor.CreateEditor(cfg);
+            }
+            versionEditor.OnInspectorGUI();
+        }
+
+        static void DrawSeparator()
+        {
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.25f));
         }
 
         // --- Active Build Profile mode ---
