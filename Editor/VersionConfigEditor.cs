@@ -26,6 +26,11 @@ namespace Gosuman.BuildTools
         int loadedMajor = -1;
         int loadedMinor = -1;
 
+        // Cached commit count. GetCommitCount() shells out to git, so it must NOT run every
+        // repaint (the inspector repaints continuously while a text field is focused). We read
+        // it once on enable and only refresh on demand; builds still read it fresh.
+        int commitCount;
+
         // --- Build configuration ---
 
         enum Mode { ActiveProfile, Platforms }
@@ -57,6 +62,7 @@ namespace Gosuman.BuildTools
             mode = (Mode)EditorPrefs.GetInt(ModePrefKey, (int)Mode.ActiveProfile);
             for (int i = 0; i < Platforms.Length; i++)
                 selected[i] = EditorPrefs.GetBool(Platforms[i].PrefKey, false);
+            commitCount = VersionReader.GetCommitCount();
         }
 
         public override void OnInspectorGUI()
@@ -82,9 +88,7 @@ namespace Gosuman.BuildTools
 
         void DrawVersion(VersionConfig cfg)
         {
-            // Major / Minor (bumpable) + computed Commit count. Version is major.minor.commitCount.
-            int z = VersionReader.GetCommitCount();
-
+            // Major / Minor (bumpable) + cached Commit count. Version is major.minor.commitCount.
             EditorGUILayout.BeginHorizontal();
             DrawBumpableField("Major", ref cfg.major, () =>
             {
@@ -99,7 +103,7 @@ namespace Gosuman.BuildTools
                 cfg.minor++;
                 MarkDirty(cfg);
             });
-            DrawComputedField("Commit", z);
+            DrawComputedField("Commit", commitCount, () => commitCount = VersionReader.GetCommitCount());
             EditorGUILayout.EndHorizontal();
 
             if (GUI.changed) MarkDirty(cfg);
@@ -362,13 +366,18 @@ namespace Gosuman.BuildTools
             EditorGUILayout.EndVertical();
         }
 
-        // Column with the label on top and a read-only int field below.
-        static void DrawComputedField(string label, int value)
+        // Column with the label on top and a read-only int field below, plus an optional
+        // refresh button (used for the cached commit count).
+        static void DrawComputedField(string label, int value, System.Action onRefresh = null)
         {
             EditorGUILayout.BeginVertical();
             EditorGUILayout.LabelField(label, EditorStyles.miniLabel);
+            EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(true))
                 EditorGUILayout.IntField(value);
+            if (onRefresh != null && GUILayout.Button("↻", GUILayout.Width(22)))
+                onRefresh();
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
         }
 
