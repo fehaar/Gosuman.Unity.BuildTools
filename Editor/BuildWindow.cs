@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build.Profile;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
@@ -8,6 +9,10 @@ namespace Gosuman.BuildTools
 {
     public class BuildWindow : EditorWindow
     {
+        enum Mode { ActiveProfile, Platforms }
+
+        const string ModePrefKey = "BuildTools.Build.Mode";
+
         struct Platform
         {
             public string Name;
@@ -26,15 +31,17 @@ namespace Gosuman.BuildTools
         };
 
         bool[] selected = new bool[5];
+        Mode mode;
 
         public static void Open()
         {
             var w = GetWindow<BuildWindow>("Build");
-            w.minSize = new Vector2(280, 240);
+            w.minSize = new Vector2(300, 260);
         }
 
         void OnEnable()
         {
+            mode = (Mode)EditorPrefs.GetInt(ModePrefKey, (int)Mode.ActiveProfile);
             for (int i = 0; i < Platforms.Length; i++)
                 selected[i] = EditorPrefs.GetBool(Platforms[i].PrefKey, false);
         }
@@ -45,6 +52,97 @@ namespace Gosuman.BuildTools
             EditorGUILayout.LabelField($"Version: {VersionReader.GetVersion()}", EditorStyles.boldLabel);
             EditorGUILayout.Space(8);
 
+            var newMode = (Mode)GUILayout.Toolbar((int)mode, new[] { "Active Profile", "Platforms" });
+            if (newMode != mode)
+            {
+                mode = newMode;
+                EditorPrefs.SetInt(ModePrefKey, (int)mode);
+            }
+            EditorGUILayout.Space(8);
+
+            if (mode == Mode.ActiveProfile)
+                DrawActiveProfile();
+            else
+                DrawPlatforms();
+        }
+
+        // --- Active Build Profile mode ---
+
+        void DrawActiveProfile()
+        {
+            var profile = BuildProfile.GetActiveBuildProfile();
+            if (profile == null)
+            {
+                EditorGUILayout.HelpBox("No active build profile. Select one via File > Build Profiles.", MessageType.Warning);
+                return;
+            }
+
+            EditorGUILayout.LabelField("Active profile", profile.name);
+            EditorGUILayout.LabelField("Target", EditorUserBuildSettings.activeBuildTarget.ToString());
+            EditorGUILayout.Space(8);
+
+            if (GUILayout.Button("Build Active Profile", GUILayout.Height(32)))
+                BuildActiveProfile(profile);
+        }
+
+        void BuildActiveProfile(BuildProfile profile)
+        {
+            string version = VersionReader.GetVersion();
+            VersionReader.EnsureReleaseNotes(VersionReader.LoadOrCreate());
+
+            var target = EditorUserBuildSettings.activeBuildTarget;
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string outputDir = Path.Combine(projectRoot, "Build", profile.name, version);
+            Directory.CreateDirectory(outputDir);
+            string output = Path.Combine(outputDir, ExecutableName(target));
+
+            string[] scenes = profile.scenes
+                .Where(s => s.enabled)
+                .Select(s => s.path)
+                .ToArray();
+
+            string previousVersion = PlayerSettings.bundleVersion;
+            PlayerSettings.bundleVersion = version;
+            PlayerSettings.Android.bundleVersionCode = VersionReader.GetCommitCount();
+            try
+            {
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = scenes,
+                    locationPathName = output,
+                    target = target,
+                    options = BuildOptions.None,
+                });
+
+                if (report.summary.result == BuildResult.Succeeded)
+                    Debug.Log($"BuildTools: {profile.name} {version} succeeded → {output} ({report.summary.totalSize / 1024 / 1024} MB)");
+                else
+                    Debug.LogError($"BuildTools: {profile.name} {version} FAILED ({report.summary.totalErrors} error(s))");
+            }
+            finally
+            {
+                PlayerSettings.bundleVersion = previousVersion;
+                AssetDatabase.SaveAssets();
+            }
+        }
+
+        static string ExecutableName(BuildTarget target)
+        {
+            string product = Application.productName;
+            return target switch
+            {
+                BuildTarget.StandaloneWindows or BuildTarget.StandaloneWindows64 => $"{product}.exe",
+                BuildTarget.StandaloneOSX => $"{product}.app",
+                BuildTarget.Android => $"{product}.apk",
+                BuildTarget.StandaloneLinux64 => product,
+                _ => product, // WebGL / iOS build into a folder named after the product
+            };
+        }
+
+        // --- Platforms + Azure mode ---
+
+        void DrawPlatforms()
+        {
             EditorGUILayout.LabelField("Platforms", EditorStyles.boldLabel);
             for (int i = 0; i < Platforms.Length; i++)
             {
