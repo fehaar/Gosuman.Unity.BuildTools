@@ -15,5 +15,14 @@ namespace Gosuman.BuildTools
             Selection.activeObject = cfg;
             EditorGUIUtility.PingObject(cfg);
         }
+
+        [MenuItem("Build/Release Notes")]
+        static void OpenReleaseNotes()
+        {
+            var cfg = VersionReader.LoadOrCreate();
+            string path = VersionReader.EnsureReleaseNotes(cfg);
+            if (!string.IsNullOrEmpty(path))
+                EditorUtility.RevealInFinder(path);
+        }
     }
 }
