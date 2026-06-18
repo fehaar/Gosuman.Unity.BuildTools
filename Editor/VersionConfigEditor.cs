@@ -32,6 +32,7 @@ namespace Gosuman.BuildTools
         // fetched on a background thread when the inspector is shown or the editor regains
         // focus, then cached; builds still read it fresh.
         int commitCount;
+        bool commitCountKnown; // false until the first background fetch returns (shows "?")
         Task<int> commitCountTask;
         string projectDir; // captured on the main thread for the background git call
 
@@ -101,7 +102,10 @@ namespace Gosuman.BuildTools
             if (!commitCountTask.IsCompleted) return;
 
             if (commitCountTask.Status == TaskStatus.RanToCompletion)
+            {
                 commitCount = commitCountTask.Result;
+                commitCountKnown = true;
+            }
             commitCountTask = null;
             EditorApplication.update -= PollCommitCount;
             Repaint();
@@ -145,7 +149,7 @@ namespace Gosuman.BuildTools
                 cfg.minor++;
                 MarkDirty(cfg);
             });
-            DrawComputedField("Commit", commitCount, RefreshCommitCountAsync);
+            DrawComputedField("Commit", commitCountKnown ? commitCount.ToString() : "?", RefreshCommitCountAsync);
             EditorGUILayout.EndHorizontal();
 
             if (GUI.changed) MarkDirty(cfg);
@@ -408,15 +412,15 @@ namespace Gosuman.BuildTools
             EditorGUILayout.EndVertical();
         }
 
-        // Column with the label on top and a read-only int field below, plus an optional
-        // refresh button (used for the cached commit count).
-        static void DrawComputedField(string label, int value, System.Action onRefresh = null)
+        // Column with the label on top and a read-only field below, plus an optional refresh
+        // button. Takes a string so it can show a placeholder (e.g. "?") while fetching.
+        static void DrawComputedField(string label, string value, System.Action onRefresh = null)
         {
             EditorGUILayout.BeginVertical();
             EditorGUILayout.LabelField(label, EditorStyles.miniLabel);
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(true))
-                EditorGUILayout.IntField(value);
+                EditorGUILayout.TextField(value);
             if (onRefresh != null && GUILayout.Button("↻", GUILayout.Width(22)))
                 onRefresh();
             EditorGUILayout.EndHorizontal();
