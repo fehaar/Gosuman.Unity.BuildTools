@@ -244,7 +244,10 @@ namespace Gosuman.BuildTools
             EditorGUILayout.Space(8);
 
             if (GUILayout.Button("Build Active Profile", GUILayout.Height(32)))
-                BuildActiveProfile(profile);
+                // Defer out of OnInspectorGUI: BuildPipeline.BuildPlayer pumps its own progress
+                // UI, and running it inside the IMGUI pass corrupts GUI state ("GUI Window tried
+                // to begin rendering while something else had not finished rendering").
+                EditorApplication.delayCall += () => BuildActiveProfile(profile);
         }
 
         void BuildActiveProfile(BuildProfile profile)
@@ -319,7 +322,7 @@ namespace Gosuman.BuildTools
             using (new EditorGUI.DisabledScope(!anySelected))
             {
                 if (GUILayout.Button("Build", GUILayout.Height(32)))
-                    RunBuilds();
+                    EditorApplication.delayCall += RunBuilds; // defer out of the IMGUI pass (see DrawActiveProfile)
             }
 
             if (!anySelected)
