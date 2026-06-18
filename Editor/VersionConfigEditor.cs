@@ -21,44 +21,28 @@ namespace Gosuman.BuildTools
             serializedObject.Update();
             GUI.changed = false;
 
-            // Major / minor with inline bump buttons
-            EditorGUILayout.LabelField("Version", EditorStyles.boldLabel);
+            // Version fields in one row: Major / Minor (bumpable) + computed Commit count.
+            // Final version is major.minor.commitCount.
+            int z = VersionReader.GetCommitCount();
 
             EditorGUILayout.BeginHorizontal();
-            cfg.major = EditorGUILayout.IntField("Major", cfg.major);
-            if (GUILayout.Button("↑", GUILayout.Width(28)))
+            DrawBumpableField("Major", ref cfg.major, () =>
             {
                 Undo.RecordObject(cfg, "Bump Major");
                 cfg.major++;
                 cfg.minor = 0;
                 MarkDirty(cfg);
-            }
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.BeginHorizontal();
-            cfg.minor = EditorGUILayout.IntField("Minor", cfg.minor);
-            if (GUILayout.Button("↑", GUILayout.Width(28)))
+            });
+            DrawBumpableField("Minor", ref cfg.minor, () =>
             {
                 Undo.RecordObject(cfg, "Bump Minor");
                 cfg.minor++;
                 MarkDirty(cfg);
-            }
+            });
+            DrawComputedField("Commit", z);
             EditorGUILayout.EndHorizontal();
 
             if (GUI.changed) MarkDirty(cfg);
-
-            EditorGUILayout.Space();
-
-            // Computed fields (read-only)
-            EditorGUILayout.LabelField("Computed at build time", EditorStyles.boldLabel);
-            int z = VersionReader.GetCommitCount();
-            int w = VersionReader.GetRunNumber();
-            using (new EditorGUI.DisabledScope(true))
-            {
-                EditorGUILayout.IntField("Commit count (z)", z);
-                EditorGUILayout.IntField("Run number (w)", w);
-                EditorGUILayout.TextField("Full version", $"{cfg.major}.{cfg.minor}.{z}.{w}");
-            }
 
             EditorGUILayout.Space();
 
@@ -114,6 +98,29 @@ namespace Gosuman.BuildTools
             notesFocusedLastFrame = notesFocused;
 
             serializedObject.ApplyModifiedProperties();
+        }
+
+        // Column with the label on top and an int field + bump button below.
+        static void DrawBumpableField(string label, ref int value, System.Action onBump)
+        {
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.LabelField(label, EditorStyles.miniLabel);
+            EditorGUILayout.BeginHorizontal();
+            value = EditorGUILayout.IntField(value);
+            if (GUILayout.Button("↑", GUILayout.Width(22)))
+                onBump();
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
+        }
+
+        // Column with the label on top and a read-only int field below.
+        static void DrawComputedField(string label, int value)
+        {
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.LabelField(label, EditorStyles.miniLabel);
+            using (new EditorGUI.DisabledScope(true))
+                EditorGUILayout.IntField(value);
+            EditorGUILayout.EndVertical();
         }
 
         static void MarkDirty(VersionConfig cfg)

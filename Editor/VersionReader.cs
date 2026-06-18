@@ -26,7 +26,7 @@ namespace Gosuman.BuildTools
         public static string GetVersion()
         {
             var cfg = LoadOrCreate();
-            return $"{cfg.major}.{cfg.minor}.{GetCommitCount()}.{GetRunNumber()}";
+            return $"{cfg.major}.{cfg.minor}.{GetCommitCount()}";
         }
 
         // --- Release notes (external <major.minor>.md files) ---
@@ -99,12 +99,6 @@ namespace Gosuman.BuildTools
                 return int.TryParse(output.Trim(), out int n) ? n : 0;
             }
             catch { return 0; }
-        }
-
-        public static int GetRunNumber()
-        {
-            string val = Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER");
-            return int.TryParse(val, out int n) ? n : 0;
         }
 
         static string RunGit(string args)
