@@ -17,7 +17,7 @@ namespace Gosuman.BuildTools
             string zipPath = Path.Combine(Directory.GetParent(buildFolder)!.FullName, zipName);
 
             if (File.Exists(zipPath)) File.Delete(zipPath);
-            ZipFile.CreateFromDirectory(buildFolder, zipPath, CompressionLevel.Optimal, includeBaseDirectory: false);
+            ZipFile.CreateFromDirectory(buildFolder, zipPath, System.IO.Compression.CompressionLevel.Optimal, includeBaseDirectory: false);
 
             long mb = new FileInfo(zipPath).Length / 1024 / 1024;
             Debug.Log($"BuildTools: zipped build → {zipPath} ({mb} MB)");
