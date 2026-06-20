@@ -36,6 +36,11 @@ namespace Gosuman.BuildTools
         Task<int> commitCountTask;
         string projectDir; // captured on the main thread for the background git call
 
+        // --- Azure upload ---
+
+        const string AzureFoldoutPrefKey = "BuildTools.Azure.Foldout";
+        bool azureFoldout;
+
         // --- Build configuration ---
 
         enum Mode { ActiveProfile, Platforms }
@@ -64,6 +69,7 @@ namespace Gosuman.BuildTools
 
         void OnEnable()
         {
+            azureFoldout = EditorPrefs.GetBool(AzureFoldoutPrefKey, false);
             mode = (Mode)EditorPrefs.GetInt(ModePrefKey, (int)Mode.ActiveProfile);
             for (int i = 0; i < Platforms.Length; i++)
                 selected[i] = EditorPrefs.GetBool(Platforms[i].PrefKey, false);
@@ -120,6 +126,10 @@ namespace Gosuman.BuildTools
             DrawVersion(cfg);
             EditorGUILayout.Space();
             DrawReleaseNotes(cfg);
+
+            EditorGUILayout.Space();
+            DrawSeparator();
+            DrawAzure();
 
             EditorGUILayout.Space();
             DrawSeparator();
@@ -210,6 +220,30 @@ namespace Gosuman.BuildTools
                 VersionReader.WriteReleaseNotes(cfg, notesBuffer);
 
             notesFocusedLastFrame = notesFocused;
+        }
+
+        // --- Azure upload ---
+
+        void DrawAzure()
+        {
+            bool next = EditorGUILayout.Foldout(azureFoldout, "Azure Upload", true, EditorStyles.foldoutHeader);
+            if (next != azureFoldout)
+            {
+                azureFoldout = next;
+                EditorPrefs.SetBool(AzureFoldoutPrefKey, azureFoldout);
+            }
+
+            if (!azureFoldout) return;
+
+            EditorGUI.indentLevel++;
+            string currentSas = EditorPrefs.GetString(AzureUploader.PrefContainerSasUrl, "");
+            string newSas = EditorGUILayout.PasswordField("Container SAS URL", currentSas);
+            if (newSas != currentSas)
+                EditorPrefs.SetString(AzureUploader.PrefContainerSasUrl, newSas);
+
+            if (!AzureUploader.IsConfigured)
+                EditorGUILayout.HelpBox("Enter SAS URL to enable automatic upload after build.", MessageType.None);
+            EditorGUI.indentLevel--;
         }
 
         // --- Build ---
@@ -330,17 +364,6 @@ namespace Gosuman.BuildTools
 
             if (!anySelected)
                 EditorGUILayout.HelpBox("Select at least one platform.", MessageType.Info);
-
-            EditorGUILayout.Space(12);
-            EditorGUILayout.LabelField("Azure Upload", EditorStyles.boldLabel);
-
-            string currentSas = EditorPrefs.GetString(AzureUploader.PrefContainerSasUrl, "");
-            string newSas = EditorGUILayout.PasswordField("Container SAS URL", currentSas);
-            if (newSas != currentSas)
-                EditorPrefs.SetString(AzureUploader.PrefContainerSasUrl, newSas);
-
-            if (!AzureUploader.IsConfigured)
-                EditorGUILayout.HelpBox("Enter SAS URL to enable automatic upload after build.", MessageType.None);
         }
 
         void RunBuilds()
