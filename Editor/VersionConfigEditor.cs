@@ -280,7 +280,10 @@ namespace Gosuman.BuildTools
                 });
 
                 if (report.summary.result == BuildResult.Succeeded)
+                {
                     Debug.Log($"BuildTools: {profile.name} {version} succeeded → {output} ({report.summary.totalSize / 1024 / 1024} MB)");
+                    BuildArtifacts.ZipBuild(outputDir, version, profile.name);
+                }
                 else
                     Debug.LogError($"BuildTools: {profile.name} {version} FAILED ({report.summary.totalErrors} error(s))");
             }
@@ -377,12 +380,10 @@ namespace Gosuman.BuildTools
                     Debug.Log($"BuildTools: {platform.Name} succeeded ({report.summary.totalSize / 1024 / 1024} MB)");
                     built++;
 
-                    if (File.Exists(output) && AzureUploader.IsConfigured)
-                    {
-                        string ext = Path.GetExtension(output);
-                        string blobName = $"{Application.productName}-{version}-{platform.Name.ToLower()}{ext}";
-                        AzureUploader.Upload(output, blobName);
-                    }
+                    string buildFolder = Path.GetDirectoryName(output)!;
+                    string zip = BuildArtifacts.ZipBuild(buildFolder, version, platform.Name);
+                    if (AzureUploader.IsConfigured)
+                        AzureUploader.Upload(zip, Path.GetFileName(zip));
                 }
                 else
                 {
