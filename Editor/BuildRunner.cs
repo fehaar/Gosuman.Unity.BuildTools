@@ -74,9 +74,9 @@ namespace Gosuman.BuildTools
                 if (report.summary.result == BuildResult.Succeeded)
                 {
                     Debug.Log($"BuildRunner: {profile.name} {version} succeeded → {output} ({report.summary.totalSize / 1024 / 1024} MB)");
-                    string zip = BuildArtifacts.ZipBuild(outputDir, version, profile.name);
+                    string artifact = BuildArtifacts.PrepareArtifact(output, target, outputDir, version, profile.name);
                     if (AzureUploader.IsConfigured)
-                        AzureUploader.Upload(zip, Path.GetFileName(zip));
+                        AzureUploader.Upload(artifact, Path.GetFileName(artifact));
                     EditorApplication.Exit(0);
                 }
                 else
@@ -147,9 +147,9 @@ namespace Gosuman.BuildTools
                     {
                         Debug.Log($"BuildRunner: {name} succeeded ({report.summary.totalSize / 1024 / 1024} MB)");
                         string buildFolder = Path.GetDirectoryName(output)!;
-                        string zip = BuildArtifacts.ZipBuild(buildFolder, version, name);
+                        string artifact = BuildArtifacts.PrepareArtifact(output, target, buildFolder, version, name);
                         if (AzureUploader.IsConfigured)
-                            AzureUploader.Upload(zip, Path.GetFileName(zip));
+                            AzureUploader.Upload(artifact, Path.GetFileName(artifact));
                         built++;
                     }
                     else

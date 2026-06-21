@@ -1,11 +1,18 @@
 using System.IO;
 using System.IO.Compression;
+using UnityEditor;
 using UnityEngine;
 
 namespace Gosuman.BuildTools
 {
     public static class BuildArtifacts
     {
+        // Returns the path of the artifact to upload for a build. Android already produces a
+        // single .apk file, so zipping it would just add an unnecessary wrapper — upload it
+        // as-is. Every other platform builds a folder, which still needs zipping.
+        public static string PrepareArtifact(string outputPath, BuildTarget target, string buildFolder, string version, string label) =>
+            target == BuildTarget.Android ? outputPath : ZipBuild(buildFolder, version, label);
+
         // Zips a build's output folder into a sibling archive named
         // <product>-<version>-<label>.zip and returns its path. Overwrites an existing zip of
         // the same name. <label> is the platform name (Platforms mode) or the build profile
