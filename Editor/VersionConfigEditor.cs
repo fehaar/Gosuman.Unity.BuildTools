@@ -403,7 +403,7 @@ namespace Gosuman.BuildTools
                     Debug.Log($"BuildTools: {platform.Name} succeeded ({report.summary.totalSize / 1024 / 1024} MB)");
                     built++;
 
-                    string buildFolder = Path.GetDirectoryName(output)!;
+                    string buildFolder = BuildArtifacts.BuildsIntoFolder(platform.Target) ? output : Path.GetDirectoryName(output)!;
                     string artifact = BuildArtifacts.PrepareArtifact(output, platform.Target, buildFolder, version, platform.Name);
                     if (AzureUploader.IsConfigured)
                         AzureUploader.Upload(artifact, Path.GetFileName(artifact));

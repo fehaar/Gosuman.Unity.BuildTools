@@ -146,7 +146,7 @@ namespace Gosuman.BuildTools
                     if (report.summary.result == BuildResult.Succeeded)
                     {
                         Debug.Log($"BuildRunner: {name} succeeded ({report.summary.totalSize / 1024 / 1024} MB)");
-                        string buildFolder = Path.GetDirectoryName(output)!;
+                        string buildFolder = BuildArtifacts.BuildsIntoFolder(target) ? output : Path.GetDirectoryName(output)!;
                         string artifact = BuildArtifacts.PrepareArtifact(output, target, buildFolder, version, name);
                         if (AzureUploader.IsConfigured)
                             AzureUploader.Upload(artifact, Path.GetFileName(artifact));
