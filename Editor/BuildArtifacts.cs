@@ -7,6 +7,14 @@ namespace Gosuman.BuildTools
 {
     public static class BuildArtifacts
     {
+        // WebGL and iOS builds are handed a bare folder path as locationPathName and Unity
+        // populates that folder directly — output already IS the build folder. Every other
+        // target builds a single file (.exe/.apk/binary) inside a folder, so the build folder
+        // is output's parent. Callers must branch on this before deriving buildFolder from
+        // output, or WebGL/iOS zips end up one directory level too high.
+        public static bool BuildsIntoFolder(BuildTarget target) =>
+            target == BuildTarget.WebGL || target == BuildTarget.iOS;
+
         // Returns the path of the artifact to upload for a build. Android already produces a
         // single .apk file, so zipping it would just add an unnecessary wrapper — upload it
         // as-is. Every other platform builds a folder, which still needs zipping.
