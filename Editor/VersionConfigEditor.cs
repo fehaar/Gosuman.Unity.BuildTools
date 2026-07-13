@@ -188,6 +188,15 @@ namespace Gosuman.BuildTools
                 loadedMajor = cfg.major;
                 loadedMinor = cfg.minor;
                 notesFocusedLastFrame = false;
+
+                // If the notes TextArea still holds keyboard focus (e.g. the user clicked
+                // straight from it to a bump button without deselecting first), Unity's IMGUI
+                // keeps serving that control's own cached RecycledTextEditor buffer instead of
+                // the new notesBuffer we just assigned — the field would keep showing the old
+                // version's text until focus changes some other way. Explicitly dropping focus
+                // here forces it to pick up the reloaded content immediately.
+                if (GUI.GetNameOfFocusedControl() == NotesControlName)
+                    GUI.FocusControl(null);
             }
 
             EditorGUILayout.LabelField($"Release notes for {cfg.major}.{cfg.minor}", EditorStyles.boldLabel);
