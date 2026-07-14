@@ -17,9 +17,27 @@ namespace Gosuman.BuildTools
 
         // Returns the path of the artifact to upload for a build. Android already produces a
         // single .apk file, so zipping it would just add an unnecessary wrapper — upload it
-        // as-is. Every other platform builds a folder, which still needs zipping.
+        // as-is, but still rename it to match every other platform's versioned naming. Every
+        // other platform builds a folder, which still needs zipping to get that same naming.
         public static string PrepareArtifact(string outputPath, BuildTarget target, string buildFolder, string version, string label) =>
-            target == BuildTarget.Android ? outputPath : ZipBuild(buildFolder, version, label);
+            target == BuildTarget.Android ? RenameApk(outputPath, version, label) : ZipBuild(buildFolder, version, label);
+
+        // Renames the built .apk to <product>-<version>-<label>.apk, matching the
+        // zip-wrapped platforms' naming convention, and returns the new path. Overwrites an
+        // existing .apk of the same name.
+        static string RenameApk(string outputPath, string version, string label)
+        {
+            string product = Sanitize(Application.productName);
+            string apkName = $"{product}-{version}-{Sanitize(label)}.apk";
+            string apkPath = Path.Combine(Directory.GetParent(outputPath)!.FullName, apkName);
+
+            if (File.Exists(apkPath)) File.Delete(apkPath);
+            File.Move(outputPath, apkPath);
+
+            long mb = new FileInfo(apkPath).Length / 1024 / 1024;
+            Debug.Log($"BuildTools: renamed APK → {apkPath} ({mb} MB)");
+            return apkPath;
+        }
 
         // Zips a build's output folder into a sibling archive named
         // <product>-<version>-<label>.zip and returns its path. Overwrites an existing zip of
