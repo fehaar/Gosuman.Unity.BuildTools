@@ -22,11 +22,14 @@ namespace Gosuman.BuildTools
     //                             Example: BUILD_PLATFORMS=Windows,Linux
     public static class BuildRunner
     {
-        static readonly (string Name, BuildTarget Target, string RelPath)[] KnownPlatforms =
+        // A property, not a static readonly field: ExecutableName reads Application.productName,
+        // which isn't safe to evaluate at type-load time. WebGL/iOS build into a bare folder
+        // (see BuildArtifacts.BuildsIntoFolder), so their RelPath has no filename to derive.
+        static (string Name, BuildTarget Target, string RelPath)[] KnownPlatforms => new[]
         {
-            ("Windows", BuildTarget.StandaloneWindows64, "Builds/Windows/app.exe"),
-            ("Linux",   BuildTarget.StandaloneLinux64,   "Builds/Linux/app.x86_64"),
-            ("Android", BuildTarget.Android,             "Builds/Android/app.apk"),
+            ("Windows", BuildTarget.StandaloneWindows64, $"Builds/Windows/{ExecutableName(BuildTarget.StandaloneWindows64)}"),
+            ("Linux",   BuildTarget.StandaloneLinux64,   $"Builds/Linux/{ExecutableName(BuildTarget.StandaloneLinux64)}"),
+            ("Android", BuildTarget.Android,             $"Builds/Android/{ExecutableName(BuildTarget.Android)}"),
             ("WebGL",   BuildTarget.WebGL,               "Builds/WebGL"),
             ("iOS",     BuildTarget.iOS,                  "Builds/iOS"),
         };
