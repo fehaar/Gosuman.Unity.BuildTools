@@ -116,7 +116,11 @@ namespace Gosuman.BuildTools
             }
         }
 
-        static byte[] Sha256(string s) => SHA256.HashData(Encoding.UTF8.GetBytes(s));
+        static byte[] Sha256(string s)
+        {
+            using var sha = SHA256.Create();
+            return sha.ComputeHash(Encoding.UTF8.GetBytes(s));
+        }
 
         static byte[] HmacSha256(byte[] key, string data)
         {
