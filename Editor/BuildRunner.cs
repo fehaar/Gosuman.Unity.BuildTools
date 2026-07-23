@@ -15,8 +15,15 @@ namespace Gosuman.BuildTools
     //   -executeMethod Gosuman.BuildTools.BuildRunner.BuildPlatforms
     //
     // Environment variables:
-    //   AZURE_CONTAINER_SAS_URL   Container SAS URL — overrides EditorPrefs when set.
-    //                             Required for upload in headless mode (no EditorPrefs).
+    //   SCALEWAY_S3_ENDPOINT      Object Storage endpoint host, e.g. s3.fr-par.scw.cloud.
+    //                             Overrides EditorPrefs when set. Optional — defaults to
+    //                             s3.fr-par.scw.cloud if neither this nor EditorPrefs is set.
+    //   SCALEWAY_S3_REGION        Region, e.g. fr-par. Overrides EditorPrefs when set.
+    //   SCALEWAY_S3_BUCKET        Bucket name. Overrides EditorPrefs when set.
+    //   SCALEWAY_S3_ACCESS_KEY    Object Storage IAM access key. Overrides EditorPrefs.
+    //   SCALEWAY_S3_SECRET_KEY    Object Storage IAM secret key. Overrides EditorPrefs.
+    //                             Bucket + access/secret key are required for upload in
+    //                             headless mode (no EditorPrefs).
     //   BUILD_PLATFORMS           Comma-separated platform names for BuildPlatforms.
     //                             Accepted values: Windows, Linux, Android, WebGL, iOS
     //                             Example: BUILD_PLATFORMS=Windows,Linux
@@ -37,7 +44,7 @@ namespace Gosuman.BuildTools
         // -executeMethod Gosuman.BuildTools.BuildRunner.BuildActiveProfile
         public static void BuildActiveProfile()
         {
-            ApplySasUrlFromEnv();
+            ApplyScalewayCredsFromEnv();
 
             var profile = BuildProfile.GetActiveBuildProfile();
             if (profile == null)
@@ -78,8 +85,8 @@ namespace Gosuman.BuildTools
                 {
                     Debug.Log($"BuildRunner: {profile.name} {version} succeeded → {output} ({report.summary.totalSize / 1024 / 1024} MB)");
                     string artifact = BuildArtifacts.PrepareArtifact(output, target, outputDir, version, profile.name);
-                    if (AzureUploader.IsConfigured)
-                        AzureUploader.Upload(artifact, Path.GetFileName(artifact));
+                    if (ScalewayUploader.IsConfigured)
+                        ScalewayUploader.Upload(artifact, Path.GetFileName(artifact));
                     EditorApplication.Exit(0);
                 }
                 else
@@ -98,7 +105,7 @@ namespace Gosuman.BuildTools
         // -executeMethod Gosuman.BuildTools.BuildRunner.BuildPlatforms
         public static void BuildPlatforms()
         {
-            ApplySasUrlFromEnv();
+            ApplyScalewayCredsFromEnv();
 
             string platformsEnv = Environment.GetEnvironmentVariable("BUILD_PLATFORMS") ?? "";
             var requested = platformsEnv
@@ -151,8 +158,8 @@ namespace Gosuman.BuildTools
                         Debug.Log($"BuildRunner: {name} succeeded ({report.summary.totalSize / 1024 / 1024} MB)");
                         string buildFolder = BuildArtifacts.BuildsIntoFolder(target) ? output : Path.GetDirectoryName(output)!;
                         string artifact = BuildArtifacts.PrepareArtifact(output, target, buildFolder, version, name);
-                        if (AzureUploader.IsConfigured)
-                            AzureUploader.Upload(artifact, Path.GetFileName(artifact));
+                        if (ScalewayUploader.IsConfigured)
+                            ScalewayUploader.Upload(artifact, Path.GetFileName(artifact));
                         built++;
                     }
                     else
@@ -172,13 +179,22 @@ namespace Gosuman.BuildTools
             EditorApplication.Exit(failed > 0 ? 1 : 0);
         }
 
-        // Allows CI to pass the SAS URL as an env var instead of requiring EditorPrefs
-        // (which aren't available in headless mode).
-        static void ApplySasUrlFromEnv()
+        // Allows CI to pass Scaleway credentials as env vars instead of requiring
+        // EditorPrefs (which aren't available in headless mode).
+        static void ApplyScalewayCredsFromEnv()
         {
-            string sasUrl = Environment.GetEnvironmentVariable("AZURE_CONTAINER_SAS_URL") ?? "";
-            if (!string.IsNullOrEmpty(sasUrl))
-                EditorPrefs.SetString(AzureUploader.PrefContainerSasUrl, sasUrl);
+            void Apply(string envVar, string prefKey)
+            {
+                string value = Environment.GetEnvironmentVariable(envVar) ?? "";
+                if (!string.IsNullOrEmpty(value))
+                    EditorPrefs.SetString(prefKey, value);
+            }
+
+            Apply("SCALEWAY_S3_ENDPOINT", ScalewayUploader.PrefEndpoint);
+            Apply("SCALEWAY_S3_REGION", ScalewayUploader.PrefRegion);
+            Apply("SCALEWAY_S3_BUCKET", ScalewayUploader.PrefBucket);
+            Apply("SCALEWAY_S3_ACCESS_KEY", ScalewayUploader.PrefAccessKey);
+            Apply("SCALEWAY_S3_SECRET_KEY", ScalewayUploader.PrefSecretKey);
         }
 
         static string ExecutableName(BuildTarget target)
