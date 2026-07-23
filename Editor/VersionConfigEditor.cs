@@ -36,10 +36,10 @@ namespace Gosuman.BuildTools
         Task<int> commitCountTask;
         string projectDir; // captured on the main thread for the background git call
 
-        // --- Azure upload ---
+        // --- Scaleway upload ---
 
-        const string AzureFoldoutPrefKey = "BuildTools.Azure.Foldout";
-        bool azureFoldout;
+        const string ScalewayFoldoutPrefKey = "BuildTools.Scaleway.Foldout";
+        bool scalewayFoldout;
 
         // --- Build configuration ---
 
@@ -69,7 +69,7 @@ namespace Gosuman.BuildTools
 
         void OnEnable()
         {
-            azureFoldout = EditorPrefs.GetBool(AzureFoldoutPrefKey, false);
+            scalewayFoldout = EditorPrefs.GetBool(ScalewayFoldoutPrefKey, false);
             mode = (Mode)EditorPrefs.GetInt(ModePrefKey, (int)Mode.ActiveProfile);
             for (int i = 0; i < Platforms.Length; i++)
                 selected[i] = EditorPrefs.GetBool(Platforms[i].PrefKey, false);
@@ -129,7 +129,7 @@ namespace Gosuman.BuildTools
 
             EditorGUILayout.Space();
             DrawSeparator();
-            DrawAzure();
+            DrawScaleway();
 
             EditorGUILayout.Space();
             DrawSeparator();
@@ -231,27 +231,48 @@ namespace Gosuman.BuildTools
             notesFocusedLastFrame = notesFocused;
         }
 
-        // --- Azure upload ---
+        // --- Scaleway upload ---
 
-        void DrawAzure()
+        void DrawScaleway()
         {
-            bool next = EditorGUILayout.Foldout(azureFoldout, "Azure Upload", true, EditorStyles.foldoutHeader);
-            if (next != azureFoldout)
+            bool next = EditorGUILayout.Foldout(scalewayFoldout, "Scaleway Upload", true, EditorStyles.foldoutHeader);
+            if (next != scalewayFoldout)
             {
-                azureFoldout = next;
-                EditorPrefs.SetBool(AzureFoldoutPrefKey, azureFoldout);
+                scalewayFoldout = next;
+                EditorPrefs.SetBool(ScalewayFoldoutPrefKey, scalewayFoldout);
             }
 
-            if (!azureFoldout) return;
+            if (!scalewayFoldout) return;
 
             EditorGUI.indentLevel++;
-            string currentSas = EditorPrefs.GetString(AzureUploader.PrefContainerSasUrl, "");
-            string newSas = EditorGUILayout.PasswordField("Container SAS URL", currentSas);
-            if (newSas != currentSas)
-                EditorPrefs.SetString(AzureUploader.PrefContainerSasUrl, newSas);
 
-            if (!AzureUploader.IsConfigured)
-                EditorGUILayout.HelpBox("Enter SAS URL to enable automatic upload after build.", MessageType.None);
+            string endpoint = EditorPrefs.GetString(ScalewayUploader.PrefEndpoint, "s3.fr-par.scw.cloud");
+            string newEndpoint = EditorGUILayout.TextField("Endpoint", endpoint);
+            if (newEndpoint != endpoint)
+                EditorPrefs.SetString(ScalewayUploader.PrefEndpoint, newEndpoint);
+
+            string region = EditorPrefs.GetString(ScalewayUploader.PrefRegion, "fr-par");
+            string newRegion = EditorGUILayout.TextField("Region", region);
+            if (newRegion != region)
+                EditorPrefs.SetString(ScalewayUploader.PrefRegion, newRegion);
+
+            string bucket = EditorPrefs.GetString(ScalewayUploader.PrefBucket, "");
+            string newBucket = EditorGUILayout.TextField("Bucket", bucket);
+            if (newBucket != bucket)
+                EditorPrefs.SetString(ScalewayUploader.PrefBucket, newBucket);
+
+            string accessKey = EditorPrefs.GetString(ScalewayUploader.PrefAccessKey, "");
+            string newAccessKey = EditorGUILayout.TextField("Access Key", accessKey);
+            if (newAccessKey != accessKey)
+                EditorPrefs.SetString(ScalewayUploader.PrefAccessKey, newAccessKey);
+
+            string secretKey = EditorPrefs.GetString(ScalewayUploader.PrefSecretKey, "");
+            string newSecretKey = EditorGUILayout.PasswordField("Secret Key", secretKey);
+            if (newSecretKey != secretKey)
+                EditorPrefs.SetString(ScalewayUploader.PrefSecretKey, newSecretKey);
+
+            if (!ScalewayUploader.IsConfigured)
+                EditorGUILayout.HelpBox("Enter bucket + access/secret key to enable automatic upload after build.", MessageType.None);
             EditorGUI.indentLevel--;
         }
 
@@ -414,8 +435,8 @@ namespace Gosuman.BuildTools
 
                     string buildFolder = BuildArtifacts.BuildsIntoFolder(platform.Target) ? output : Path.GetDirectoryName(output)!;
                     string artifact = BuildArtifacts.PrepareArtifact(output, platform.Target, buildFolder, version, platform.Name);
-                    if (AzureUploader.IsConfigured)
-                        AzureUploader.Upload(artifact, Path.GetFileName(artifact));
+                    if (ScalewayUploader.IsConfigured)
+                        ScalewayUploader.Upload(artifact, Path.GetFileName(artifact));
                 }
                 else
                 {
